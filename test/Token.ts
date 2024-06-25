@@ -65,7 +65,9 @@ describe("Token", () => {
     describe("Success", () => {
       beforeEach(async () => {
         amount = tokens(100);
-        transaction = await token.connect(deployer).transfer(receiver, amount);
+        transaction = await token
+          .connect(deployer)
+          .transfer(receiver.address, amount);
         result = await transaction.wait();
       });
 
@@ -105,42 +107,115 @@ describe("Token", () => {
         expect(
           token
             .connect(deployer)
-            .transfer("0x0000000000000000000000000000000", amount)
+            .transfer("0x0000000000000000000000000000000000000000", amount)
         ).to.be.reverted!;
       });
     });
+  });
 
-    describe("Approving Tokens", () => {
+  describe("Approving Tokens", () => {
+    let amount: BigNumber;
+    let transaction: any;
+    let result: any;
+
+    beforeEach(async () => {
+      amount = tokens(100);
+      transaction = await token
+        .connect(deployer)
+        .approve(exchange.address, amount);
+      result = await transaction.wait();
+    });
+
+    describe("Success", () => {
+      it("allocates an allowance for delegated token spending", async () => {
+        const { expect } = await import("chai");
+        expect(
+          await token.allowance(deployer.address, exchange.address)
+        ).to.equal(amount);
+      });
+
+      it("emits an approval event", async () => {
+        const { expect } = await import("chai");
+
+        const loggedEvent = result.events?.[0];
+        expect(loggedEvent?.event).to.equal("Approval");
+
+        const args = loggedEvent?.args;
+        expect(args._owner).to.equal(deployer.address);
+        expect(args._spender).to.equal(exchange.address);
+        expect(args._value).to.equal(amount);
+      });
+    });
+    describe("Failure", () => {
+      it("rejects invalid spenders", async () => {
+        const { expect } = await import("chai");
+        expect(
+          await token
+            .connect(deployer)
+            .approve("0x0000000000000000000000000000000000000000", amount)
+        ).to.be.revertedWith("ERC20: rejects invalid spenders");
+      });
+    });
+  });
+
+  describe("Delegated", () => {
+    let amount: BigNumber;
+    let transaction: any;
+    let result: any;
+
+    beforeEach(async () => {
+      amount = tokens(100);
+      transaction = await token
+        .connect(deployer)
+        .approve(exchange.address, amount);
+      result = await transaction.wait();
+    });
+
+    describe("Success", () => {
       beforeEach(async () => {
         amount = tokens(100);
         transaction = await token
-          .connect(deployer)
-          .approve(exchange.address, amount);
+          .connect(exchange)
+          .transferFrom(deployer.address, receiver.address, amount);
         result = await transaction.wait();
       });
 
-      describe("Success", () => {
-        it("allocates an allowance for delegated token spending", async () => {
-          const { expect } = await import("chai");
-          expect(
-            await token.allowance(deployer.address, exchange.address)
-          ).to.equal(amount);
-        });
-
- 
-        it("emits an approval event", async () => {
-          const { expect } = await import("chai");
-  
-          const loggedEvent = result.events?.[0];
-          expect(loggedEvent?.event).to.equal("Approval");
-  
-          const args = loggedEvent?.args;
-          expect(args._owner).to.equal(deployer.address);
-          expect(args._spender).to.equal(exchange.address);
-          expect(args._value).to.equal(amount);
-        });
+      it("transfers token balances", async () => {
+        const { expect } = await import("chai");
+        expect(await token.balanceOf(deployer)).to.be.equal(
+          ethers.utils.parseUnits("999900", "ethers")
+        );
+        expect(await token.balanceOf(receiver.address)).to.be.equal(amount);
       });
-      describe("Failure", () => {});
+
+      it("resets the allowance", async () => {
+        const { expect } = await import("chai");
+        expect(
+          await token.allowance(deployer.address, exchange.address)
+        ).to.be.equal(0);
+      });
+
+      it("emits a transfer event", async () => {
+        const { expect } = await import("chai");
+
+        const loggedEvent = result.events?.[0];
+        expect(loggedEvent?.event).to.equal("Transfer");
+
+        const args = loggedEvent?.args;
+        expect(args._from).to.equal(deployer.address);
+        expect(args._to).to.equal(receiver.address);
+        expect(args._value).to.equal(amount);
+      });
+    });
+
+    describe("Failure", async () => {
+      const { expect } = await import("chai");
+      const invalidAmount = tokens(100000000);
+      expect(
+        await token
+          .connect(exchange)
+          .transferFrom(deployer.address, receiver.address, invalidAmount)
+      ).to.be.revertedWith("ERC20: attempts to transfer too many tokens");
     });
   });
 });
