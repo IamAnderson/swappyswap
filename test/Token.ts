@@ -1,4 +1,5 @@
 import { ethers } from "hardhat";
+import { expect } from "chai";
 import { Contract, BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
@@ -17,6 +18,7 @@ describe("Token", () => {
     const Token = await ethers.getContractFactory("Token");
     //@ts-ignore
     token = await Token.deploy("TokenX", "TKX", "1000000");
+    await token.deployed();
 
     //@ts-ignore
     accounts = await ethers.getSigners();
@@ -72,7 +74,6 @@ describe("Token", () => {
       });
 
       it("transfers token balances", async () => {
-        const { expect } = await import("chai");
         expect(await token.balanceOf(deployer.address)).to.equal(
           tokens(999900)
         );
@@ -80,7 +81,6 @@ describe("Token", () => {
       });
 
       it("emits a transfer event", async () => {
-        const { expect } = await import("chai");
 
         const loggedEvent = result.events?.[0];
         expect(loggedEvent?.event).to.equal("Transfer");
@@ -94,7 +94,6 @@ describe("Token", () => {
 
     describe("Failure", () => {
       it("rejects insufficent balances", async () => {
-        const { expect } = await import("chai");
         const invalidAmount = tokens(1000000000000);
         expect(
           token.connect(deployer).transfer(receiver.address, invalidAmount)
@@ -102,7 +101,6 @@ describe("Token", () => {
       });
 
       it("rejects invalid reciepient", async () => {
-        const { expect } = await import("chai");
         const amount = tokens(100);
         expect(
           token
@@ -128,14 +126,12 @@ describe("Token", () => {
 
     describe("Success", () => {
       it("allocates an allowance for delegated token spending", async () => {
-        const { expect } = await import("chai");
         expect(
           await token.allowance(deployer.address, exchange.address)
         ).to.equal(amount);
       });
 
       it("emits an approval event", async () => {
-        const { expect } = await import("chai");
 
         const loggedEvent = result.events?.[0];
         expect(loggedEvent?.event).to.equal("Approval");
@@ -148,7 +144,6 @@ describe("Token", () => {
     });
     describe("Failure", () => {
       it("rejects invalid spenders", async () => {
-        const { expect } = await import("chai");
         expect(
           await token
             .connect(deployer)
@@ -181,7 +176,6 @@ describe("Token", () => {
       });
 
       it("transfers token balances", async () => {
-        const { expect } = await import("chai");
         expect(await token.balanceOf(deployer)).to.be.equal(
           ethers.utils.parseUnits("999900", "ethers")
         );
@@ -189,14 +183,12 @@ describe("Token", () => {
       });
 
       it("resets the allowance", async () => {
-        const { expect } = await import("chai");
         expect(
           await token.allowance(deployer.address, exchange.address)
         ).to.be.equal(0);
       });
 
       it("emits a transfer event", async () => {
-        const { expect } = await import("chai");
 
         const loggedEvent = result.events?.[0];
         expect(loggedEvent?.event).to.equal("Transfer");

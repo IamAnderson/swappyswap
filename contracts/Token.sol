@@ -9,8 +9,6 @@ contract Token {
     uint256 public decimals = 18;
     uint256 public totalSupply;
 
-    // Objective: Track Balance, Send Tokens
-
     mapping(address => uint256) public balanceOf; //Balance of deployer
     mapping(address => mapping(address => uint256)) public allowance; //Balance of spender
 
@@ -66,7 +64,7 @@ contract Token {
         address _to,
         uint256 _value
     ) public returns (bool success) {
-        require(_value <= allowance[_from]);
+        // require(_value <= allowance[_from]);
         require(_value <= allowance[_from][msg.sender]);
 
         _transfer(_from, _to, _value);
