@@ -9,8 +9,10 @@ contract Token {
     uint256 public decimals = 18;
     uint256 public totalSupply;
 
-    mapping(address => uint256) public balanceOf; //Balance of deployer
-    mapping(address => mapping(address => uint256)) public allowance; //Balance of spender
+    //Balance of deployer
+    mapping(address => uint256) public balanceOf;
+    //Balance of spender
+    mapping(address => mapping(address => uint256)) public allowance;
 
     event Transfer(address _from, address _to, uint256 _value);
     event Approval(
@@ -64,8 +66,11 @@ contract Token {
         address _to,
         uint256 _value
     ) public returns (bool success) {
-        // require(_value <= allowance[_from]);
-        require(_value <= allowance[_from][msg.sender]);
+        require(_value <= balanceOf[_from], "Insufficient Balance");
+        require(
+            _value <= allowance[_from][msg.sender],
+            "Insufficient Allowance"
+        );
 
         _transfer(_from, _to, _value);
 
