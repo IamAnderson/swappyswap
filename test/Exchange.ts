@@ -77,7 +77,7 @@ describe("Exchange", () => {
 
       it("emits a deposit event", async () => {
 
-        const loggedEvent = result?.events?.[1];
+        const loggedEvent = result?.events?.[1]; //2 events are emitted
         expect(loggedEvent?.event).to.equal("Deposit");
 
         const args = loggedEvent?.args;
@@ -94,4 +94,77 @@ describe("Exchange", () => {
       })
     });
   });
+
+  describe("Withdraw Tokens", () => {
+    let transaction;
+    let result: any;
+
+    beforeEach(async() => {
+      //Approve Token
+      transaction = await token1
+        .connect(user1)
+        .approve(exchange.address, amount);
+      result = await transaction.wait();
+
+      //Deposit Token
+      transaction = await exchange
+        .connect(user1)
+        .depositToken(token1.address, amount);
+      result = await transaction.wait();
+      //Withdwat tokes
+      transaction = await exchange.connect(user1).withdraw(token1.address, amount);
+      result = await transaction.wait();
+    });
+
+    describe("Success", () => {
+      it("withdraws token funds", async () => {
+        expect(await token1.balanceOf(exchange.address)).to.equal(0);
+        expect(await exchange.token(token1.address, user1.address)).to.equal(0);
+        expect(await exchange.balanceOf(token1.address, user1.address)).to.equal(0);
+      });
+
+      it("emits a withdraw event", async () => {
+
+        const loggedEvent = result?.events?.[1]; //2 events are emitted
+        expect(loggedEvent?.event).to.equal("Withdraw");
+
+        const args = loggedEvent?.args;
+        expect(args.token).to.equal(token1.address);
+        expect(args.user).to.equal(user1.address);
+        expect(args.amount).to.equal(amount);
+        expect(args.balance).to.equal(0);
+      });
+    });
+
+    describe("Failure", () => {
+      const invalidAmount = 1000000000;
+      it("fails for insufficient balance", async () => {
+        await expect(exchange.connect(user1).withdraw(token1.address, invalidAmount)).to.be.revertedWith("WITHDRAW ERROR: Tokens balance is less than amount");
+      })
+    });
+  });
+
+  describe("Checking Balances", () => {
+    let transaction;
+    let amount = tokens(1);
+    let result: any;
+
+    beforeEach(async () => {
+      //Approve Token
+      transaction = await token1
+        .connect(user1)
+        .approve(exchange.address, amount);
+      result = await transaction.wait();
+
+      //Deposit Token
+      transaction = await exchange
+        .connect(user1)
+        .depositToken(token1.address, amount);
+      result = await transaction.wait();
+    });
+
+    it("returns user balance", async () => {
+      expect(await exchange.balanceOf(token1.address, user1.address)).to.equal(1);
+    });
+  });  
 });
