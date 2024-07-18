@@ -245,4 +245,71 @@ describe("Exchange", () => {
       });
     });
   });
+
+  describe("Order actions", () => {
+    let transaction;
+    let result: any;
+
+    let amount = tokens(1);
+
+    describe("Cancelling Order", () => {
+      beforeEach(async () => {
+        //Approve Token
+        transaction = await token1
+          .connect(user1)
+          .approve(exchange.address, amount);
+        result = await transaction.wait();
+
+        //Deposit Token
+        transaction = await exchange
+          .connect(user1)
+          .depositToken(token1.address, amount);
+        result = await transaction.wait();
+
+        // Make Order
+        transaction = await exchange
+          .connect(user1)
+          .makeOrder(token2.address, amount, token1.address, amount);
+        result = await transaction.wait();
+      });
+
+      describe("Success", () => {
+        beforeEach(async () => {
+          transaction = exchange.connect(user1).cancelOrder(1);
+          result = await transaction.wait();
+        });
+
+        it("updates cancelled orders", async () => {
+          expect(await exchange.orderCancelled(1)).to.equal(true);
+        });
+  
+        it("emits a order event", async () => {
+          const loggedEvent = result?.events?.[0];
+          expect(loggedEvent?.event).to.equal("Order");
+  
+          const args = loggedEvent?.args;
+          expect(args.id).to.equal(1);
+          expect(args.user).to.equal(user1.address);
+          expect(args.tokenGet).to.equal(token2.address);
+          expect(args.amountGet).to.equal(1);
+          expect(args.tokenGive).to.equal(token1.address);
+          expect(args.amountGive).to.equal(1);
+          expect(args.timeStamp).to.at.least(1);
+        });
+      });
+  
+      describe("Failure", () => {
+        it("Rejects invalid order ids", async () => {
+          const invalidOrderId = 9999;
+          expect(await exchange.connect(user1).cancelOrder(invalidOrderId)).to.be.revertedWith("Invalid order Id")
+        });
+
+        it("Rejects unauthorized cancelations", async () => {
+          expect(await exchange.connect(user2).cancelOrder(1)).to.be.revertedWith("Unauthorized to cancel order")
+        });
+      });
+    });
+
+  });
+  
 });
